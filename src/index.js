@@ -15,7 +15,7 @@ const ctx = canvas.getContext("2d");
 const classNameForLoading = "loading";
 const debug = true;
 
-const sceneBg = 0x000000;
+const sceneBg = 0x111111;
 
 //
 // Setup all scene, controls, particle systems, etc.
