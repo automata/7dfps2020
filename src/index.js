@@ -102,9 +102,9 @@ const initImages = () => {
         geometry.morphAttributes = {};
 
         const materialVertexColor = new THREE.PointsMaterial({
-            size: 1,
+            size: 2,
             vertexColors: THREE.VertexColors,
-            sizeAttenuation: false
+            sizeAttenuation: true
         })
 
         let i = 0;
