@@ -83,7 +83,7 @@ const initImages = () => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     // img.src = 'https://i.imgur.com/X8JjyKz.jpg';
-    img.src = '/vhs_caps/009.jpg';
+    img.src = 'vhs_caps/009.jpg';
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     img.onload = () => {
