@@ -1,6 +1,8 @@
 const Stats = require("stats.js");
 // const { OrbitControls } = require('three/examples/jsm/controls/OrbitControls.js');
 const { FirstPersonControls } = require('three/examples/jsm/controls/FirstPersonControls.js');
+// const { PointerLockManager } = require("./PointerLockManager")
+
 
 window.THREE = require("three");
 
@@ -8,6 +10,9 @@ let stats, particles, scene, group,
     videoWidth, videoHeight, imageCache,
     renderer, camera, clock,
     width, height, video, controls,
+    raycaster, mouse,
+    frameCounter = 0;
+    allParticles = [],
     capturedParticles = [];
 
 const canvas = document.createElement("canvas");
@@ -48,8 +53,13 @@ const init = () => {
 
     // FPS Controls
     controls =  new FirstPersonControls(camera);
-    controls.lookSpeed = 1.5;
+    // controls =  new PointerLockManager(camera, scene);
+    controls.lookSpeed = 0.5;
     controls.movementSpeed = 1500;
+
+    // Interaction
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
 
     onResize();
 
@@ -69,26 +79,36 @@ const init = () => {
 
     initKeys();
 
+    initMouse();
+
     draw();
 
     initImages();
 };
 
+const initImages = () => {
+
+    for (let i=1; i<=143; i+=1) {
+        const margin = 1000;
+        const str_i = `${i}`.padStart(4, 0);
+        loadImage(`vhs_caps/${str_i}.jpg`, Math.random()* margin,  Math.random() * margin, Math.random() * margin);
+    }
+};
+
 //
 // Load an image as particles using some threshold for RGB as fake depth on z-axis
 //
-const initImages = () => {
+const loadImage = (uri, anchorX, anchorY, anchorZ) => {
     const loader = new THREE.ImageLoader();
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    // img.src = 'https://i.imgur.com/X8JjyKz.jpg';
-    img.src = 'vhs_caps/009.jpg';
+    img.src = uri;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     img.onload = () => {
         // How much of original image size to scale down
-        const factor = 0.20;
+        const factor = 0.1;
         ctx.scale(factor, factor);
         ctx.drawImage(img, 0, 0);
 
@@ -102,7 +122,7 @@ const initImages = () => {
         geometry.morphAttributes = {};
 
         const materialVertexColor = new THREE.PointsMaterial({
-            size: 2,
+            size: 1,
             vertexColors: THREE.VertexColors,
             sizeAttenuation: true
         })
@@ -111,9 +131,9 @@ const initImages = () => {
         for (let y = 0, height = imageData.height; y < height; y += 1) {
             for (let x = 0, width = imageData.width; x < width; x += 1) {
                 const vertex = new THREE.Vector3(
-                    x - imageData.width / 2,
-                    -y + imageData.height / 2,
-                    0
+                    anchorX + (x - imageData.width / 2),
+                    anchorY + (-y + imageData.height / 2),
+                    anchorZ
                 );
                 
                 let index = i*4;
@@ -140,6 +160,8 @@ const initImages = () => {
                 } else {
                     vertex.z = gray;
                 }
+                
+                vertex.z += anchorZ;
                 vertex.z *= -1;
 
                 const color = new THREE.Color(r/255,g/255,b/255);
@@ -155,6 +177,7 @@ const initImages = () => {
         const part = new THREE.Points(geometry, materialVertexColor);
         part.geometry.verticesNeedUpdate = true;
         part.geometry.colorsNeedUpdate = true;
+        allParticles.push(part);
 
         group.add(part);
     };
@@ -173,6 +196,17 @@ const initKeys = () => {
         }
     });
 
+};
+
+const initMouse = () => {
+    document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+};
+
+const onDocumentMouseMove = (event) => {
+    event.preventDefault();
+
+    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 };
 
 //
@@ -354,24 +388,47 @@ const draw = (t) => {
         particles.geometry.colorsNeedUpdate = true;
     }
 
-    // TODO: We can iterate over all particles here and swing or interact in other ways
-    // if (capturedParticles) {
-    //     for (let i = 0, il = capturedParticles.length; i < il; i += 1) {
+    raycaster.setFromCamera( mouse, camera );
 
-    //         for (let j = 0, jl = capturedParticles[i].geometry.vertices.length; j < jl; j += 1) {
+    // Iterate over all particles here and swing or interact in other ways
+    if (allParticles) {
+        for (let i = 0, il = allParticles.length; i < il; i += 1) {
 
-    //             const particle = capturedParticles[i].geometry.vertices[j];
+            const particles = allParticles[i];
+
+            intersects = raycaster.intersectObject( particles );
+
+            if (intersects.length > 0) {
+                console.log('intersected!!', intersects);
+                for (let j = 0, jl = intersects.length; j < jl; j+=1) {
+                    const idx = intersects[j].index;
+                    intersects[j].object.geometry.colors[idx].set(0xffffff);
+                    intersects[j].object.geometry.colorsNeedUpdate = true;
+                }
+            }
+
+            // const vertices = allParticles[i].geometry.vertices;
+            // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
+
+            //     const particle = vertices[j];
                 
-    //             capturedParticles[i].geometry.colors[j].set(0x0000ff);
-    //             // particle.z = 100;
+            //     if (Math.random() > 0.3) {
+            //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
+            //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
+            //         //particle.x += Math.sin(frameCounter/100) * Math.random();
+            //         //particle.y += Math.cos(frameCounter/100) * Math.random();
+            //         //particle.x += Math.sin(frameCounter/10) * 2;
+            //     }
                 
-    //         }
-    //         particles.geometry.verticesNeedUpdate = true;
-    //         capturedParticles[i].geometry.colorsNeedUpdate = true;
-    //     }
-    // }
+            // }
+            // allParticles[i].geometry.verticesNeedUpdate = true;
+            
+        }
+    }
 
     renderer.render(scene, camera);
+
+    frameCounter += 1;
 
     if (debug) {
         stats.end();
