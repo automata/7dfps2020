@@ -12,10 +12,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "first-person-controls": "^1.0.1",
     "glslify": "^7.0.0",
     "stats.js": "^0.17.0",
-    "three": "^0.106.2"
+    "three": "^0.123.0"
   },
   "devDependencies": {
     "webpack": "^4.44.2",
