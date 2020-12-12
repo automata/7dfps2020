@@ -13,30 +13,20 @@ body #cdawrap {
     --cda-top: 2rem;
 }
 
-.demo-2 #cdawrap {
-    --cda-text-color: #fff;
-    --cda-sp-color: #fff;
-}
+
 
 body {
-    --color-text: #9c814f;
+    --color-text: #ffffff;
     --color-bg: #111111;
-    --color-link: #0a8dbb;
+    --color-link: #66ff00;
     --color-link-hover: #fff;
-    --color-info: #5a5757;
+    --color-info: #ffffff;
     color: var(--color-text);
     background-color: var(--color-bg);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: monospace;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
-}
-
-.demo-2 {
-    --color-text: #fff;
-    --color-bg: #2d40f8;
-    --color-link: #78e7f6;
-    --color-info: #1e2ba8;
 }
 
 .hidden {
@@ -69,6 +59,28 @@ body {
     opacity: 0.4;
     background: var(--color-link);
     animation: loaderAnim 0.7s linear infinite alternate forwards;
+}
+
+#blocker { 
+    opacity: 0.9;
+    z-index: 10;
+	position: fixed; 
+	
+	width: 100%;
+	
+	padding: 10%;
+
+	top: 50%; 
+	left: 50%; 
+	transform: translate(-50%, -50%);
+
+	background-color: rgba(0, 0, 0, 0.8);
+
+	text-align: center;
+
+	color: white;
+    cursor: pointer;
+    transition: all 1s;
 }
 
 @keyframes loaderAnim {
