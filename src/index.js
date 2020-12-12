@@ -1,8 +1,9 @@
 const Stats = require("stats.js");
 // const { OrbitControls } = require('three/examples/jsm/controls/OrbitControls.js');
-const { FirstPersonControls } = require('three/examples/jsm/controls/FirstPersonControls.js');
-// const { PointerLockManager } = require("./PointerLockManager")
+const { PointerLockManager } = require("./PointerLockManager")
 
+const { RectAreaLightHelper } = require('three/examples/jsm/helpers/RectAreaLightHelper.js');
+const { RectAreaLightUniformsLib } = require('three/examples/jsm/lights/RectAreaLightUniformsLib.js');
 
 window.THREE = require("three");
 
@@ -11,8 +12,10 @@ let stats, particles, scene, group,
     renderer, camera, clock,
     width, height, video, controls,
     raycaster, mouse,
-    frameCounter = 0;
+    raycasterFloor,
+    frameCounter = 0,
     allParticles = [],
+    rectLightHelper, rectLight,
     capturedParticles = [];
 
 const canvas = document.createElement("canvas");
@@ -20,7 +23,10 @@ const ctx = canvas.getContext("2d");
 const classNameForLoading = "loading";
 const debug = true;
 
-const sceneBg = 0x111111;
+const vertex = new THREE.Vector3();
+const color = new THREE.Color();
+
+const sceneBg = 0x000000;
 
 //
 // Setup all scene, controls, particle systems, etc.
@@ -36,12 +42,40 @@ const init = () => {
         document.body.appendChild( stats.dom );
     }
 
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    document.getElementById("content").appendChild(renderer.domElement);
+
     // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(sceneBg);
+    scene.fog = new THREE.FogExp2( 0x00000, 0.006 );
+    // scene.fog = new THREE.Fog(0x333333, 0, 750 );
 
-    renderer = new THREE.WebGLRenderer();
-    document.getElementById("content").appendChild(renderer.domElement);
+    // const light = new THREE.HemisphereLight( 0x333333, 0xffffff, 0.75 );
+    // light.position.set( 0.5, 1, 0.75 );
+    // scene.add( light );
+
+    scene.add( new THREE.AmbientLight( 0xffffff, 0.4 ) );
+
+    RectAreaLightUniformsLib.init();
+
+    rectLight = new THREE.RectAreaLight( 0xffffff, 2, 100, 10 );
+    rectLight.position.set( -50, 200, 10 );
+    rectLight.rotateY(95);
+    rectLight.rotateX(30)
+    scene.add( rectLight );
+
+    rectLightHelper = new RectAreaLightHelper( rectLight );
+    rectLight.add( rectLightHelper );
+
+    const geoFloor = new THREE.BoxBufferGeometry( 2000, 0.1, 2000 );
+    const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x111111, roughness: 0.3, metalness: 0.6 } );
+    const mshStdFloor = new THREE.Mesh( geoFloor, matStdFloor );
+    mshStdFloor.receiveShadow = true;
+    scene.add( mshStdFloor );
 
     clock = new THREE.Clock();
 
@@ -52,14 +86,16 @@ const init = () => {
     initCamera();
 
     // FPS Controls
-    controls =  new FirstPersonControls(camera);
-    // controls =  new PointerLockManager(camera, scene);
-    controls.lookSpeed = 0.5;
-    controls.movementSpeed = 1500;
+    controls =  new PointerLockManager(camera, scene);
 
     // Interaction
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
+
+    // Floor / ground
+
+    // initFloor();
+    raycasterFloor = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 10 );
 
     onResize();
 
@@ -86,12 +122,18 @@ const init = () => {
     initImages();
 };
 
+
+const initFloor = () => {
+    
+
+};
+
 const initImages = () => {
 
-    for (let i=1; i<=143; i+=1) {
-        const margin = 1000;
+    for (let i=1; i<=10; i+=1) {
+        const margin = 500;
         const str_i = `${i}`.padStart(4, 0);
-        loadImage(`vhs_caps/${str_i}.jpg`, Math.random()* margin,  Math.random() * margin, Math.random() * margin);
+        loadImage(`vhs_caps/${str_i}.jpg`, Math.random()* margin,  50, Math.random() * margin);
     }
 };
 
@@ -217,9 +259,10 @@ const initCamera = () => {
     const aspect = width / height;
 
     camera = new THREE.PerspectiveCamera(fov, aspect, 1, 10000);
-    const z = Math.min(window.innerWidth, window.innerHeight);
+    camera.position.y = 10;
+    //const z = Math.min(window.innerWidth, window.innerHeight);
     //camera.position.set(0, 0, z);
-    camera.lookAt(0, 0, 0);
+    //camera.lookAt(0, 0, 0);
 
     scene.add(camera);
 };
@@ -348,6 +391,9 @@ const draw = (t) => {
         stats.begin();
     }
 
+    // raycasterFloor.ray.origin.copy( controls.getObject().position );
+    // raycasterFloor.ray.origin.y -= 10;
+
     // Webcam particles
     if (particles) {
         const density = 3;
@@ -391,40 +437,42 @@ const draw = (t) => {
     raycaster.setFromCamera( mouse, camera );
 
     // Iterate over all particles here and swing or interact in other ways
-    if (allParticles) {
-        for (let i = 0, il = allParticles.length; i < il; i += 1) {
+    // if (allParticles) {
+    //     for (let i = 0, il = allParticles.length; i < il; i += 1) {
 
-            const particles = allParticles[i];
+    //         const particles = allParticles[i];
 
-            intersects = raycaster.intersectObject( particles );
+    //         intersects = raycaster.intersectObject( particles );
 
-            if (intersects.length > 0) {
-                console.log('intersected!!', intersects);
-                for (let j = 0, jl = intersects.length; j < jl; j+=1) {
-                    const idx = intersects[j].index;
-                    intersects[j].object.geometry.colors[idx].set(0xffffff);
-                    intersects[j].object.geometry.colorsNeedUpdate = true;
-                }
-            }
+    //         if (intersects.length > 0) {
+    //             console.log('intersected!!', intersects);
+    //             for (let j = 0, jl = intersects.length; j < jl; j+=1) {
+    //                 const idx = intersects[j].index;
+    //                 intersects[j].object.geometry.colors[idx].set(0xffffff);
+    //                 intersects[j].object.geometry.colorsNeedUpdate = true;
+    //             }
+    //         }
 
-            // const vertices = allParticles[i].geometry.vertices;
-            // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
+    //         // const vertices = allParticles[i].geometry.vertices;
+    //         // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
 
-            //     const particle = vertices[j];
+    //         //     const particle = vertices[j];
                 
-            //     if (Math.random() > 0.3) {
-            //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
-            //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
-            //         //particle.x += Math.sin(frameCounter/100) * Math.random();
-            //         //particle.y += Math.cos(frameCounter/100) * Math.random();
-            //         //particle.x += Math.sin(frameCounter/10) * 2;
-            //     }
+    //         //     if (Math.random() > 0.3) {
+    //         //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
+    //         //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
+    //         //         //particle.x += Math.sin(frameCounter/100) * Math.random();
+    //         //         //particle.y += Math.cos(frameCounter/100) * Math.random();
+    //         //         //particle.x += Math.sin(frameCounter/10) * 2;
+    //         //     }
                 
-            // }
-            // allParticles[i].geometry.verticesNeedUpdate = true;
+    //         // }
+    //         // allParticles[i].geometry.verticesNeedUpdate = true;
             
-        }
-    }
+    //     }
+    // }
+
+    rectLightHelper.update();
 
     renderer.render(scene, camera);
 
@@ -449,6 +497,7 @@ const onResize = () => {
 
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
+    renderer.shadowMap.enabled = true;
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
