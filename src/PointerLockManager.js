@@ -4,54 +4,6 @@ export class PointerLockManager {
   constructor(camera, scene) {
 
     this.controls;
-
-    const blocker = document.getElementById( 'blocker' );
-    const instructions = document.getElementById( 'instructions' );
-  
-    const havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
-  
-    if ( havePointerLock ) {
-      const element = document.body;
-      
-      const pointerlockchange = function ( event ) {
-        if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
-          //this.controls.enabled = true;
-          blocker.style.display = 'none';
-        } else {
-          // this.controls.enabled = false;
-          // blocker.style.display = '-webkit-box';
-          // blocker.style.display = '-moz-box';
-          // blocker.style.display = 'box';
-          // instructions.style.display = '';
-          blocker.style.display = '';
-        }
-      };
-      const pointerlockerror = function ( event ) {
-        // instructions.style.display = '';
-        instructions.innerHTML = 'error';
-      };
-  
-      // Hook pointer lock state change events
-      document.addEventListener( 'pointerlockchange', pointerlockchange, false );
-      document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
-      document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
-      document.addEventListener( 'pointerlockerror', pointerlockerror, false );
-      document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
-      document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
-      blocker.addEventListener( 'click', function ( event ) {
-        
-        blocker.style.display = 'none';
-  
-        // Ask the browser to lock the pointer
-        element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
-        element.requestPointerLock();
-  
-      }, false );
-    } else {
-      instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
-    }
-  
-    this.init(camera, scene);
   
     this.moveForward = false;
     this.moveBackward = false;
@@ -59,16 +11,45 @@ export class PointerLockManager {
     this.moveRight = false;
   
     this.velocity = new THREE.Vector3();
-    this.speed = 150;
+    this.speed = 500;
     this.deltaTime = 0.06;
+
+    this.init(camera, scene);
+
 
   }
 
 	init(camera, scene) {
-		this.controls = new PointerLockControls(camera);
-		scene.add(this.controls.getObject());
+		this.controls = new PointerLockControls(camera, document.body);
+		
 
-		var onKeyDown = function ( event ) {
+    const blocker = document.getElementById( 'blocker' );
+    const instructions = document.getElementById( 'instructions' );
+
+    instructions.addEventListener( 'click', () => {
+
+      this.controls.lock();
+
+    }, false );
+
+    this.controls.addEventListener( 'lock', () => {
+
+      instructions.style.display = 'none';
+      blocker.style.display = 'none';
+
+    } );
+
+    this.controls.addEventListener( 'unlock', () => {
+
+      blocker.style.display = 'block';
+      instructions.style.display = '';
+
+    } );
+
+    scene.add(this.controls.getObject());
+
+		const onKeyDown =  ( event ) => {
+      console.log(event.keyCode);
 			switch ( event.keyCode ) {
 				case 38: // up
 				case 87: // w
@@ -91,7 +72,7 @@ export class PointerLockManager {
 					break;
 			}
 		};
-		var onKeyUp = function ( event ) {
+		var onKeyUp =  ( event ) => {
 			switch( event.keyCode ) {
 				case 38: // up
 				case 87: // w
@@ -117,10 +98,13 @@ export class PointerLockManager {
 	}
 
 	update() {
-		if ( this.controls.enabled ) {
+    //console.log(this.controls);
+		if ( this.controls.isLocked ) {
 
 			this.velocity.x -= this.velocity.x * 10.0 * this.deltaTime;
 			this.velocity.z -= this.velocity.z * 10.0 * this.deltaTime;
+      // this.velocity.y -= 9.8 * 100.0 * this.deltaTime;
+      this.velocity.y = 0;
 
 			if ( this.moveForward ) this.velocity.z -= this.speed * this.deltaTime;
 			if ( this.moveBackward ) this.velocity.z += this.speed * this.deltaTime;
@@ -128,7 +112,9 @@ export class PointerLockManager {
 			if ( this.moveRight ) this.velocity.x += this.speed * this.deltaTime;
 
 			this.controls.getObject().translateX( this.velocity.x * this.deltaTime );
-			this.controls.getObject().translateZ( this.velocity.z * this.deltaTime );
+      this.controls.getObject().translateZ( this.velocity.z * this.deltaTime );
+      // Stay on the ground
+      this.controls.getObject().position.y = 10;
 		}
 	}
 
