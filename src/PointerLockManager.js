@@ -1,8 +1,10 @@
+import { theWindow } from 'tone/build/esm/core/context/AudioContext';
+
 const { PointerLockControls } = require('three/examples/jsm/controls/PointerLockControls.js');
 
 export class PointerLockManager {
   constructor(camera, scene) {
-
+    
     this.controls;
   
     this.moveForward = false;
@@ -11,9 +13,9 @@ export class PointerLockManager {
     this.moveRight = false;
   
     this.velocity = new THREE.Vector3();
-    this.speed = 500;
+    this.speed = 200;
     this.deltaTime = 0.06;
-
+    this.counter = 0;
     this.init(camera, scene);
 
 
@@ -37,9 +39,23 @@ export class PointerLockManager {
       instructions.style.display = 'none';
       blocker.style.display = 'none';
 
+      // HACKY!!!
+      if (window.soundBg) {
+        if (!window.soundBg.isPlaying) {
+          // console.log("Start!", window.soundBg);
+          window.soundBg.play();
+        }
+      }
+
     } );
 
     this.controls.addEventListener( 'unlock', () => {
+
+      if (window.soundBg) {
+        if (window.soundBg.isPlaying) {
+          window.soundBg.pause();
+        }
+      }
 
       blocker.style.display = 'block';
       instructions.style.display = '';
@@ -49,7 +65,6 @@ export class PointerLockManager {
     scene.add(this.controls.getObject());
 
 		const onKeyDown =  ( event ) => {
-      console.log(event.keyCode);
 			switch ( event.keyCode ) {
 				case 38: // up
 				case 87: // w
@@ -115,6 +130,10 @@ export class PointerLockManager {
       this.controls.getObject().translateZ( this.velocity.z * this.deltaTime );
       // Stay on the ground
       this.controls.getObject().position.y = 10;
+      if (this.moveForward || this.moveBackWard) {
+        this.controls.getObject().position.y = 10 + Math.sin(this.counter/5);
+      }
+      this.counter += 1;
 		}
 	}
 
