@@ -12,6 +12,7 @@ let stats, particles, scene, group,
     renderer, camera, clock,
     width, height, video, controls,
     raycaster, mouse,
+    soundBg, soundFx1, listener,
     raycasterFloor,
     frameCounter = 0,
     allParticles = [],
@@ -83,7 +84,11 @@ const init = () => {
     group = new THREE.Group();
     scene.add(group);
 
+    // Camera
     initCamera();
+
+    // Audio
+    initAudio();
 
     // FPS Controls
     controls =  new PointerLockManager(camera, scene);
@@ -122,6 +127,32 @@ const init = () => {
     initImages();
 };
 
+const initAudio = () => {
+    const listener = new THREE.AudioListener();
+    camera.add( listener );
+
+    const audioLoader = new THREE.AudioLoader();
+    soundBg = new THREE.Audio( listener );
+    soundFx1 = new THREE.Audio( listener );
+
+    window.soundBg = soundBg;
+
+    audioLoader.load( 'audio/drone_nofx.mp3', ( buffer ) => {
+
+        soundBg.setBuffer( buffer );
+        // soundBg.setLoop( true );
+        soundBg.setVolume( 0.2 );
+        // soundBg.play();
+
+    } );
+
+    audioLoader.load( 'audio/fx_click.mp3', ( buffer ) => {
+
+        soundFx1.setBuffer( buffer );
+        soundFx1.setVolume( 0.5 );
+
+    } );
+};
 
 const initFloor = () => {
     
@@ -437,40 +468,44 @@ const draw = (t) => {
     raycaster.setFromCamera( mouse, camera );
 
     // Iterate over all particles here and swing or interact in other ways
-    // if (allParticles) {
-    //     for (let i = 0, il = allParticles.length; i < il; i += 1) {
+    if (allParticles) {
+        for (let i = 0, il = allParticles.length; i < il; i += 1) {
 
-    //         const particles = allParticles[i];
+            const particles = allParticles[i];
 
-    //         intersects = raycaster.intersectObject( particles );
+            intersects = raycaster.intersectObject( particles );
 
-    //         if (intersects.length > 0) {
-    //             console.log('intersected!!', intersects);
-    //             for (let j = 0, jl = intersects.length; j < jl; j+=1) {
-    //                 const idx = intersects[j].index;
-    //                 intersects[j].object.geometry.colors[idx].set(0xffffff);
-    //                 intersects[j].object.geometry.colorsNeedUpdate = true;
-    //             }
-    //         }
+            if (intersects.length > 0) {
+                // console.log('intersected!!', intersects);
+                // if (!soundFx1.isPlaying) {
+                //     console.log(soundFx1.duration);
+                //     soundFx1.play();
+                // }
+                for (let j = 0, jl = intersects.length; j < jl; j+=1) {
+                    const idx = intersects[j].index;
+                    intersects[j].object.geometry.colors[idx].set(0xffffff);
+                    intersects[j].object.geometry.colorsNeedUpdate = true;
+                }
+            }
 
-    //         // const vertices = allParticles[i].geometry.vertices;
-    //         // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
+            // const vertices = allParticles[i].geometry.vertices;
+            // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
 
-    //         //     const particle = vertices[j];
+            //     const particle = vertices[j];
                 
-    //         //     if (Math.random() > 0.3) {
-    //         //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
-    //         //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
-    //         //         //particle.x += Math.sin(frameCounter/100) * Math.random();
-    //         //         //particle.y += Math.cos(frameCounter/100) * Math.random();
-    //         //         //particle.x += Math.sin(frameCounter/10) * 2;
-    //         //     }
+            //     if (Math.random() > 0.3) {
+            //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
+            //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
+            //         //particle.x += Math.sin(frameCounter/100) * Math.random();
+            //         //particle.y += Math.cos(frameCounter/100) * Math.random();
+            //         //particle.x += Math.sin(frameCounter/10) * 2;
+            //     }
                 
-    //         // }
-    //         // allParticles[i].geometry.verticesNeedUpdate = true;
+            // }
+            // allParticles[i].geometry.verticesNeedUpdate = true;
             
-    //     }
-    // }
+        }
+    }
 
     rectLightHelper.update();
 
