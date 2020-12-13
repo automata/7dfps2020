@@ -15,6 +15,9 @@ let stats, particles, scene, group,
     soundBg, soundFx1, listener,
     raycasterFloor,
     frameCounter = 0,
+    lastVisited = -1,
+    currentFrame = 0,
+    guideCubes = [],
     allParticles = [],
     rectLightHelper, rectLight,
     capturedParticles = [];
@@ -67,7 +70,7 @@ const init = () => {
     rectLight.position.set( -50, 200, 10 );
     rectLight.rotateY(95);
     rectLight.rotateX(30)
-    scene.add( rectLight );
+    // scene.add( rectLight );
 
     rectLightHelper = new RectAreaLightHelper( rectLight );
     rectLight.add( rectLightHelper );
@@ -142,7 +145,7 @@ const initAudio = () => {
         soundBg.setBuffer( buffer );
         // soundBg.setLoop( true );
         soundBg.setVolume( 0.2 );
-        // soundBg.play();
+        soundBg.play();
 
     } );
 
@@ -161,17 +164,23 @@ const initFloor = () => {
 
 const initImages = () => {
 
-    for (let i=1; i<=10; i+=1) {
-        const margin = 500;
-        const str_i = `${i}`.padStart(4, 0);
-        loadImage(`vhs_caps/${str_i}.jpg`, Math.random()* margin,  50, Math.random() * margin);
-    }
+    // for (let i=1; i<=10; i+=1) {
+    //     const margin = 200;
+    //     const str_i = `${i}`.padStart(4, 0);
+    //     loadImage(`vhs_caps/${str_i}.jpg`, 0,  0, i*margin);
+    // }
+    loadImage(currentFrame, 0,  0, 0);
+
 };
 
 //
 // Load an image as particles using some threshold for RGB as fake depth on z-axis
 //
-const loadImage = (uri, anchorX, anchorY, anchorZ) => {
+const loadImage = (index, anchorX, anchorY, anchorZ) => {
+
+    const str_i = `${index+1}`.padStart(4, 0);
+    const uri = `vhs_caps/${str_i}.jpg`;
+
     const loader = new THREE.ImageLoader();
 
     const img = new Image();
@@ -200,12 +209,26 @@ const loadImage = (uri, anchorX, anchorY, anchorZ) => {
             sizeAttenuation: true
         })
 
+        // Guiding cube
+        const guideGeo = new THREE.BoxGeometry(5,5,5);
+        const guideMat = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+        const guideCube = new THREE.Mesh( guideGeo, guideMat );
+        guideCube.position.x = anchorX  + (parseInt(w*factor)/2);
+        guideCube.position.y = anchorY;
+        guideCube.position.z = anchorZ;
+        let randomAngle = Math.random() * 2 * Math.PI;
+        // guideCube.rotation.y = randomAngle;
+        guideCubes.push(new THREE.Vector3(guideCube.position.x, guideCube.position.y, guideCube.position.z));
+        
+        // scene.add( guideCube );
+
+
         let i = 0;
         for (let y = 0, height = imageData.height; y < height; y += 1) {
             for (let x = 0, width = imageData.width; x < width; x += 1) {
                 const vertex = new THREE.Vector3(
-                    anchorX + (x - imageData.width / 2),
-                    anchorY + (-y + imageData.height / 2),
+                    anchorX + x, //(x - imageData.width / 2),
+                    anchorY + y, // (-y + imageData.height / 2),
                     anchorZ
                 );
                 
@@ -235,7 +258,7 @@ const loadImage = (uri, anchorX, anchorY, anchorZ) => {
                 }
                 
                 vertex.z += anchorZ;
-                vertex.z *= -1;
+                //vertex.z *= -1;
 
                 const color = new THREE.Color(r/255,g/255,b/255);
                 geometry.vertices.push(vertex);
@@ -248,6 +271,7 @@ const loadImage = (uri, anchorX, anchorY, anchorZ) => {
         console.log("Created particles:", geometry.vertices.length, geometry.colors.length)
 
         const part = new THREE.Points(geometry, materialVertexColor);
+        // part.rotation.y = randomAngle;
         part.geometry.verticesNeedUpdate = true;
         part.geometry.colorsNeedUpdate = true;
         allParticles.push(part);
@@ -286,13 +310,13 @@ const onDocumentMouseMove = (event) => {
 // Setup camera
 //
 const initCamera = () => {
-    const fov = 70;
+    const fov = 60;
     const aspect = width / height;
 
     camera = new THREE.PerspectiveCamera(fov, aspect, 1, 10000);
-    camera.position.y = 10;
-    //const z = Math.min(window.innerWidth, window.innerHeight);
-    //camera.position.set(0, 0, z);
+
+    camera.rotation.y = Math.PI * 3;
+    camera.position.set(60, 10, -50);
     //camera.lookAt(0, 0, 0);
 
     scene.add(camera);
@@ -466,6 +490,27 @@ const draw = (t) => {
     }
 
     raycaster.setFromCamera( mouse, camera );
+
+    let playerPos = controls.getObject().position;
+    if (currentFrame < guideCubes.length) {
+        let guidePos = guideCubes[currentFrame];
+        let dist = Math.sqrt( 
+                Math.pow( playerPos.x - guidePos.x, 2 ) +
+                Math.pow( playerPos.z - guidePos.z, 2 )
+        );
+        if (dist < 10 && currentFrame > lastVisited) {
+
+            if (!soundFx1.isPlaying) {
+                soundFx1.play();
+            }
+
+            lastVisited = currentFrame;
+            currentFrame++;
+            loadImage(currentFrame, currentFrame * 400 * Math.random(), 0, currentFrame * 300 * Math.random());
+        }
+        
+        // console.log("==", playerPos, guidePos, dist);
+    }
 
     // Iterate over all particles here and swing or interact in other ways
     // if (allParticles) {
