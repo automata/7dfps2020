@@ -55,7 +55,7 @@ const init = () => {
     // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(sceneBg);
-    scene.fog = new THREE.FogExp2( 0x00000, 0.006 );
+    scene.fog = new THREE.FogExp2( 0x00000, 0.003 );
     // scene.fog = new THREE.Fog(0x333333, 0, 750 );
 
     // const light = new THREE.HemisphereLight( 0x333333, 0xffffff, 0.75 );
@@ -75,7 +75,7 @@ const init = () => {
     rectLightHelper = new RectAreaLightHelper( rectLight );
     rectLight.add( rectLightHelper );
 
-    const geoFloor = new THREE.BoxBufferGeometry( 2000, 0.1, 2000 );
+    const geoFloor = new THREE.BoxBufferGeometry( 10000, 0.1, 10000 );
     const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x111111, roughness: 0.3, metalness: 0.6 } );
     const mshStdFloor = new THREE.Mesh( geoFloor, matStdFloor );
     mshStdFloor.receiveShadow = true;
@@ -137,6 +137,8 @@ const initAudio = () => {
     const audioLoader = new THREE.AudioLoader();
     soundBg = new THREE.Audio( listener );
     soundFx1 = new THREE.Audio( listener );
+    soundFx2 = new THREE.Audio( listener );
+    soundFx3 = new THREE.Audio( listener );
 
     window.soundBg = soundBg;
 
@@ -144,7 +146,7 @@ const initAudio = () => {
 
         soundBg.setBuffer( buffer );
         // soundBg.setLoop( true );
-        soundBg.setVolume( 0.2 );
+        soundBg.setVolume( 0.1 );
         soundBg.play();
 
     } );
@@ -153,6 +155,20 @@ const initAudio = () => {
 
         soundFx1.setBuffer( buffer );
         soundFx1.setVolume( 0.5 );
+
+    } );
+
+    audioLoader.load( 'audio/fx_impulse.mp3', ( buffer ) => {
+
+        soundFx2.setBuffer( buffer );
+        soundFx2.setVolume( 0.5 );
+
+    } );
+
+    audioLoader.load( 'audio/bass_delay_hit.mp3', ( buffer ) => {
+
+        soundFx3.setBuffer( buffer );
+        soundFx3.setVolume( 0.5 );
 
     } );
 };
@@ -506,7 +522,11 @@ const draw = (t) => {
 
             lastVisited = currentFrame;
             currentFrame++;
-            loadImage(currentFrame, currentFrame * 400 * Math.random(), 0, currentFrame * 300 * Math.random());
+            let rx = 100 + 500 * Math.random();
+            if (Math.random() > 0.5) {
+                rx *= -1;
+            }
+            loadImage(currentFrame, playerPos.x + rx, 0, playerPos.z + 500);
         }
         
         // console.log("==", playerPos, guidePos, dist);

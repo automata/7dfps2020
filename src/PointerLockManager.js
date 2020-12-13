@@ -43,7 +43,7 @@ export class PointerLockManager {
       if (window.soundBg) {
         if (!window.soundBg.isPlaying) {
           // console.log("Start!", window.soundBg);
-          //window.soundBg.play();
+          window.soundBg.play();
         }
       }
 
@@ -53,7 +53,7 @@ export class PointerLockManager {
 
       if (window.soundBg) {
         if (window.soundBg.isPlaying) {
-          //window.soundBg.pause();
+          window.soundBg.pause();
         }
       }
 
