@@ -13,7 +13,7 @@ export class PointerLockManager {
     this.moveRight = false;
   
     this.velocity = new THREE.Vector3();
-    this.speed = 200;
+    this.speed = 500;
     this.deltaTime = 0.06;
     this.counter = 0;
     this.init(camera, scene);
@@ -130,9 +130,9 @@ export class PointerLockManager {
       this.controls.getObject().translateZ( this.velocity.z * this.deltaTime );
       // Stay on the ground
       this.controls.getObject().position.y = 10;
-      if (this.moveForward || this.moveBackWard) {
-        this.controls.getObject().position.y = 10 + Math.sin(this.counter/5);
-      }
+      // if (this.moveForward || this.moveBackWard) {
+      //   this.controls.getObject().position.y = 10 + Math.sin(this.counter/5);
+      // }
       this.counter += 1;
 		}
 	}

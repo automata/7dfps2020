@@ -227,17 +227,27 @@ const loadImage = (index, anchorX, anchorY, anchorZ) => {
 
         // Guiding cube
         const guideGeo = new THREE.BoxGeometry(5,5,5);
-        const guideMat = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+        const guideMat = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
         const guideCube = new THREE.Mesh( guideGeo, guideMat );
         guideCube.position.x = anchorX  + (parseInt(w*factor)/2);
-        guideCube.position.y = anchorY;
-        guideCube.position.z = anchorZ;
+        if (Math.random() > 0.5) {
+            guideCube.position.x += Math.random() * 10;
+        } else {
+            guideCube.position.x -= Math.random() * 10;
+        }
+        guideCube.position.y = anchorY + 10;
+        if (Math.random() > 0.5) {
+            guideCube.position.y += Math.random() * 10;
+        } else {
+            guideCube.position.y -= Math.random() * 10;
+        }
+
+        guideCube.position.z = anchorZ - 100;
         let randomAngle = Math.random() * 2 * Math.PI;
         // guideCube.rotation.y = randomAngle;
         guideCubes.push(new THREE.Vector3(guideCube.position.x, guideCube.position.y, guideCube.position.z));
         
-        // scene.add( guideCube );
-
+        scene.add( guideCube );
 
         let i = 0;
         for (let y = 0, height = imageData.height; y < height; y += 1) {
@@ -332,7 +342,7 @@ const initCamera = () => {
     camera = new THREE.PerspectiveCamera(fov, aspect, 1, 10000);
 
     camera.rotation.y = Math.PI * 3;
-    camera.position.set(60, 10, -50);
+    camera.position.set(55, 20, -150);
     //camera.lookAt(0, 0, 0);
 
     scene.add(camera);
@@ -526,51 +536,52 @@ const draw = (t) => {
             if (Math.random() > 0.5) {
                 rx *= -1;
             }
-            loadImage(currentFrame, playerPos.x + rx, 0, playerPos.z + 500);
+            // loadImage(currentFrame, playerPos.x + rx, 0, playerPos.z + 500);
+            loadImage(currentFrame, 0, 0, playerPos.z + 320);
         }
         
         // console.log("==", playerPos, guidePos, dist);
     }
 
     // Iterate over all particles here and swing or interact in other ways
-    // if (allParticles) {
-    //     for (let i = 0, il = allParticles.length; i < il; i += 1) {
+    if (allParticles) {
+        for (let i = 0, il = allParticles.length; i < il; i += 1) {
 
-    //         const particles = allParticles[i];
+            const particles = allParticles[i];
 
-    //         intersects = raycaster.intersectObject( particles );
+            intersects = raycaster.intersectObject( particles );
 
-    //         if (intersects.length > 0) {
-    //             // console.log('intersected!!', intersects);
-    //             // if (!soundFx1.isPlaying) {
-    //             //     console.log(soundFx1.duration);
-    //             //     soundFx1.play();
-    //             // }
-    //             for (let j = 0, jl = intersects.length; j < jl; j+=1) {
-    //                 const idx = intersects[j].index;
-    //                 intersects[j].object.geometry.colors[idx].set(0xffffff);
-    //                 intersects[j].object.geometry.colorsNeedUpdate = true;
-    //             }
-    //         }
+            if (intersects.length > 0) {
+                // console.log('intersected!!', intersects);
+                // if (!soundFx1.isPlaying) {
+                //     console.log(soundFx1.duration);
+                //     soundFx1.play();
+                // }
+                for (let j = 0, jl = intersects.length; j < jl; j+=1) {
+                    const idx = intersects[j].index;
+                    intersects[j].object.geometry.colors[idx].set(0x00ff00);
+                    intersects[j].object.geometry.colorsNeedUpdate = true;
+                }
+            }
 
-    //         // const vertices = allParticles[i].geometry.vertices;
-    //         // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
+            // const vertices = allParticles[i].geometry.vertices;
+            // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
 
-    //         //     const particle = vertices[j];
+            //     const particle = vertices[j];
                 
-    //         //     if (Math.random() > 0.3) {
-    //         //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
-    //         //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
-    //         //         //particle.x += Math.sin(frameCounter/100) * Math.random();
-    //         //         //particle.y += Math.cos(frameCounter/100) * Math.random();
-    //         //         //particle.x += Math.sin(frameCounter/10) * 2;
-    //         //     }
+            //     if (Math.random() > 0.3) {
+            //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
+            //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
+            //         //particle.x += Math.sin(frameCounter/100) * Math.random();
+            //         //particle.y += Math.cos(frameCounter/100) * Math.random();
+            //         //particle.x += Math.sin(frameCounter/10) * 2;
+            //     }
                 
-    //         // }
-    //         // allParticles[i].geometry.verticesNeedUpdate = true;
+            // }
+            // allParticles[i].geometry.verticesNeedUpdate = true;
             
-    //     }
-    // }
+        }
+    }
 
     rectLightHelper.update();
 
