@@ -5,9 +5,14 @@ const { PointerLockManager } = require("./PointerLockManager")
 const { RectAreaLightHelper } = require('three/examples/jsm/helpers/RectAreaLightHelper.js');
 const { RectAreaLightUniformsLib } = require('three/examples/jsm/lights/RectAreaLightUniformsLib.js');
 
+const { EffectComposer } = require('three/examples/jsm/postprocessing/EffectComposer.js');
+const { RenderPass } = require('three/examples/jsm/postprocessing/RenderPass.js');
+const { ShaderPass } = require('three/examples/jsm/postprocessing/ShaderPass.js');
+const { UnrealBloomPass } = require('three/examples/jsm/postprocessing/UnrealBloomPass.js');
+
 window.THREE = require("three");
 
-let stats, particles, scene, group,
+let stats, particles, scene, group, deltaTime, composer,
     videoWidth, videoHeight, imageCache,
     renderer, camera, clock,
     width, height, video, controls,
@@ -18,6 +23,7 @@ let stats, particles, scene, group,
     lastVisited = -1,
     currentFrame = 0,
     guideCubes = [],
+    targetCube,
     allParticles = [],
     rectLightHelper, rectLight,
     capturedParticles = [];
@@ -30,7 +36,14 @@ const debug = true;
 const vertex = new THREE.Vector3();
 const color = new THREE.Color();
 
-const sceneBg = 0x000000;
+const sceneBg = 0x202050;
+
+const params = {
+    exposure: 2,
+    bloomStrength: 2.5,
+    bloomThreshold: 0.2,
+    bloomRadius: 0.5
+};
 
 //
 // Setup all scene, controls, particle systems, etc.
@@ -46,7 +59,7 @@ const init = () => {
         document.body.appendChild( stats.dom );
     }
 
-    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer = new THREE.WebGLRenderer({antialias:true, alpha: true});
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
@@ -55,31 +68,34 @@ const init = () => {
     // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(sceneBg);
-    scene.fog = new THREE.FogExp2( 0x00000, 0.003 );
+    scene.fog = new THREE.FogExp2( 0x502020, 0.002 );
     // scene.fog = new THREE.Fog(0x333333, 0, 750 );
 
-    // const light = new THREE.HemisphereLight( 0x333333, 0xffffff, 0.75 );
-    // light.position.set( 0.5, 1, 0.75 );
-    // scene.add( light );
+    const light = new THREE.HemisphereLight( 0x502020, 0x202050, 0.5 );
+    light.position.set( 0.5, 1, 0.5 );
+    scene.add( light );
 
-    scene.add( new THREE.AmbientLight( 0xffffff, 0.4 ) );
+    // scene.add( new THREE.AmbientLight( 0x502020, 0.5 ) );
 
-    RectAreaLightUniformsLib.init();
+    // RectAreaLightUniformsLib.init();
 
-    rectLight = new THREE.RectAreaLight( 0xffffff, 2, 100, 10 );
-    rectLight.position.set( -50, 200, 10 );
-    rectLight.rotateY(95);
-    rectLight.rotateX(30)
+    // rectLight = new THREE.RectAreaLight( 0xffffff, 2, 100, 10 );
+    // rectLight.position.set( -50, 200, 10 );
+    // rectLight.rotateY(95);
+    // rectLight.rotateX(30)
     // scene.add( rectLight );
 
-    rectLightHelper = new RectAreaLightHelper( rectLight );
-    rectLight.add( rectLightHelper );
+    // rectLightHelper = new RectAreaLightHelper( rectLight );
+    // rectLight.add( rectLightHelper );
 
     const geoFloor = new THREE.BoxBufferGeometry( 10000, 0.1, 10000 );
-    const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x111111, roughness: 0.3, metalness: 0.6 } );
+    const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x502020, roughness: 1, metalness: 0. } );
     const mshStdFloor = new THREE.Mesh( geoFloor, matStdFloor );
     mshStdFloor.receiveShadow = true;
     scene.add( mshStdFloor );
+
+    particleSystem = createParticleSystem();
+    scene.add(particleSystem);
 
     clock = new THREE.Clock();
 
@@ -102,24 +118,31 @@ const init = () => {
 
     // Floor / ground
 
+    composer = new EffectComposer( renderer );
+
+    var renderPass = new RenderPass( scene, camera );
+    
+    
+  
+    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+    bloomPass.threshold = params.bloomThreshold;
+    bloomPass.strength = params.bloomStrength;
+    bloomPass.radius = params.bloomRadius;
+
+    composer.addPass( renderPass );
+    // composer.addPass( fxaaPass );
+    composer.addPass( bloomPass );
+
+    // const renderScene = new RenderPass( scene, camera );
+
+   
+    // composer.addPass( renderScene );
+    // composer.addPass( bloomPass );
+
     // initFloor();
-    raycasterFloor = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 10 );
+    // raycasterFloor = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 10 );
 
     onResize();
-
-    navigator.mediaDevices = navigator.mediaDevices || ((navigator.mozGetUserMedia || navigator.webkitGetUserMedia) ? {
-        getUserMedia: (c) => {
-            return new Promise(function (y, n) {
-                (navigator.mozGetUserMedia || navigator.webkitGetUserMedia).call(navigator, c, y, n);
-            });
-        }
-    } : null);
-
-    if (navigator.mediaDevices) {
-        // initVideo();
-    } else {
-        showAlert();
-    }
 
     initKeys();
 
@@ -141,13 +164,14 @@ const initAudio = () => {
     soundFx3 = new THREE.Audio( listener );
 
     window.soundBg = soundBg;
+    window.soundFx1 = soundFx1;
 
     audioLoader.load( 'audio/drone_nofx.mp3', ( buffer ) => {
 
         soundBg.setBuffer( buffer );
         // soundBg.setLoop( true );
         soundBg.setVolume( 0.1 );
-        soundBg.play();
+        // soundBg.play();
 
     } );
 
@@ -177,6 +201,44 @@ const initFloor = () => {
     
 
 };
+
+function createParticleSystem() {
+	
+	// The number of particles in a particle system is not easily changed.
+    var particleCount = 1000;
+    
+    // Particles are just individual vertices in a geometry
+    // Create the geometry that will hold all of the vertices
+    var particles = new THREE.Geometry();
+
+	// Create the vertices and add them to the particles geometry
+	for (var p = 0; p < particleCount; p++) {
+	
+		// This will create all the vertices in a range of -200 to 200 in all directions
+		var x = Math.random() * 400 - 200;
+		var y = Math.random() * 400 - 200;
+		var z = Math.random() * 400 - 200;
+		      
+		// Create the vertex
+		var particle = new THREE.Vector3(x, y, z);
+		
+		// Add the vertex to the geometry
+		particles.vertices.push(particle);
+	}
+
+	// Create the material that will be used to render each vertex of the geometry
+	var particleMaterial = new THREE.PointsMaterial(
+			{color: 0x502020, 
+			 size: 1,
+			 blending: THREE.AdditiveBlending,
+			 transparent: true,
+			});
+	 
+
+	particleSystem = new THREE.Points(particles, particleMaterial);
+
+	return particleSystem;	
+}
 
 const initImages = () => {
 
@@ -222,30 +284,32 @@ const loadImage = (index, anchorX, anchorY, anchorZ) => {
         const materialVertexColor = new THREE.PointsMaterial({
             size: 1,
             vertexColors: THREE.VertexColors,
-            sizeAttenuation: true
+            sizeAttenuation: true,
+            transparent: true
         })
 
         // Guiding cube
-        const guideGeo = new THREE.BoxGeometry(5,5,5);
-        const guideMat = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+        const guideGeo = new THREE.TetrahedronGeometry(10, 0); // THREE.BoxGeometry(5,5,5);
+        const guideMat = new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe: true, transparent: true } );
         const guideCube = new THREE.Mesh( guideGeo, guideMat );
         guideCube.position.x = anchorX  + (parseInt(w*factor)/2);
-        if (Math.random() > 0.5) {
-            guideCube.position.x += Math.random() * 10;
-        } else {
-            guideCube.position.x -= Math.random() * 10;
-        }
+        // if (Math.random() > 0.5) {
+        //     guideCube.position.x += Math.random() * 50;
+        // } else {
+        //     guideCube.position.x -= Math.random() * 50;
+        // }
         guideCube.position.y = anchorY + 10;
-        if (Math.random() > 0.5) {
-            guideCube.position.y += Math.random() * 10;
-        } else {
-            guideCube.position.y -= Math.random() * 10;
-        }
+        // if (Math.random() > 0.5) {
+        //     guideCube.position.y += Math.random() * 20;
+        // } else {
+        //     guideCube.position.y -= Math.random() * 20;
+        // }
 
         guideCube.position.z = anchorZ - 100;
-        let randomAngle = Math.random() * 2 * Math.PI;
+        let randomAngle = Math.random() * Math.PI/10;
         // guideCube.rotation.y = randomAngle;
-        guideCubes.push(new THREE.Vector3(guideCube.position.x, guideCube.position.y, guideCube.position.z));
+        guideCubes.push(guideCube);
+        //guideCubes.push(new THREE.Vector3(guideCube.position.x, guideCube.position.y, guideCube.position.z));
         
         scene.add( guideCube );
 
@@ -385,8 +449,9 @@ const createParticles = () => {
     geometry.morphAttributes = {};
 
     const materialVertexColor = new THREE.PointsMaterial({
-        size: 5,
-        vertexColors: THREE.VertexColors
+        size: 3,
+        vertexColors: THREE.VertexColors,
+        transparent: true
     })
 
     for (let y = 0, height = imageData.height; y < height; y += step) {
@@ -438,7 +503,8 @@ const captureParticles = () => {
 
         const materialVertexColor = new THREE.PointsMaterial({
             size: 1,
-            vertexColors: THREE.VertexColors
+            vertexColors: THREE.VertexColors,
+            transparent: true
         })
 
         for (let i=0, len = particles.geometry.vertices.length; i < len; i += 1) {
@@ -460,59 +526,33 @@ const captureParticles = () => {
     }
 };
 
+function animateParticles() {
+	var verts = particleSystem.geometry.vertices;
+	for(var i = 0; i < verts.length; i++) {
+		var vert = verts[i];
+		if (vert.y < -200) {
+			vert.y = Math.random() * 400 - 200;
+		}
+		vert.y = vert.y - (12 * deltaTime);
+	}
+	
+	
+    particleSystem.rotation.y -= .1 * deltaTime;
+    particleSystem.position.x = controls.getObject().position.x;
+    particleSystem.position.z = controls.getObject().position.z;
+    particleSystem.geometry.verticesNeedUpdate = true;
+}
+
 //
 // Main rendering loop
 //
 const draw = (t) => {
-    clock.getDelta();
+    deltaTime = clock.getDelta();
     const time = clock.elapsedTime;
     let r, g, b;
 
     if (debug) {
         stats.begin();
-    }
-
-    // raycasterFloor.ray.origin.copy( controls.getObject().position );
-    // raycasterFloor.ray.origin.y -= 10;
-
-    // Webcam particles
-    if (particles) {
-        const density = 3;
-        const useCache = parseInt(t) % 2 === 0;
-        const imageData = getImageData(video, useCache);
-        for (let i = 0, length = particles.geometry.vertices.length; i < length; i += 1) {
-            const particle = particles.geometry.vertices[i];
-            if (i % density !== 0) {
-                particle.z = 10000;
-                continue;
-            }
-            let index = i * 4;
-            let gray = (imageData.data[index] + imageData.data[index + 1] + imageData.data[index + 2]) / 3;
-            let threshold = 300;
-
-            r = imageData.data[index + 0]
-            g = imageData.data[index + 1]
-            b = imageData.data[index + 2]
-            l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-            particles.geometry.colors[i].set((r << 16) | (g << 8) | b);
-
-            if (gray < threshold) {
-                if (gray < threshold / 3) {
-                    particle.z = gray * 2;
-
-                } else if (gray < threshold / 2) {
-                    particle.z = gray * 2.5;
-
-                } else {
-                    particle.z = gray * 3;
-                }
-            } else {
-                particle.z = gray;
-            }
-        }
-        particles.geometry.verticesNeedUpdate = true;
-        particles.geometry.colorsNeedUpdate = true;
     }
 
     raycaster.setFromCamera( mouse, camera );
@@ -521,13 +561,13 @@ const draw = (t) => {
     if (currentFrame < guideCubes.length) {
         let guidePos = guideCubes[currentFrame];
         let dist = Math.sqrt( 
-                Math.pow( playerPos.x - guidePos.x, 2 ) +
-                Math.pow( playerPos.z - guidePos.z, 2 )
+                Math.pow( playerPos.x - guidePos.position.x, 2 ) +
+                Math.pow( playerPos.z - guidePos.position.z, 2 )
         );
         if (dist < 10 && currentFrame > lastVisited) {
-
-            if (!soundFx1.isPlaying) {
-                soundFx1.play();
+            guidePos.material.color.set(0x202050)
+            if (!soundFx2.isPlaying) {
+                soundFx2.play();
             }
 
             lastVisited = currentFrame;
@@ -536,56 +576,23 @@ const draw = (t) => {
             if (Math.random() > 0.5) {
                 rx *= -1;
             }
-            // loadImage(currentFrame, playerPos.x + rx, 0, playerPos.z + 500);
-            loadImage(currentFrame, 0, 0, playerPos.z + 320);
-        }
-        
-        // console.log("==", playerPos, guidePos, dist);
-    }
-
-    // Iterate over all particles here and swing or interact in other ways
-    if (allParticles) {
-        for (let i = 0, il = allParticles.length; i < il; i += 1) {
-
-            const particles = allParticles[i];
-
-            intersects = raycaster.intersectObject( particles );
-
-            if (intersects.length > 0) {
-                // console.log('intersected!!', intersects);
-                // if (!soundFx1.isPlaying) {
-                //     console.log(soundFx1.duration);
-                //     soundFx1.play();
-                // }
-                for (let j = 0, jl = intersects.length; j < jl; j+=1) {
-                    const idx = intersects[j].index;
-                    intersects[j].object.geometry.colors[idx].set(0x00ff00);
-                    intersects[j].object.geometry.colorsNeedUpdate = true;
-                }
-            }
-
-            // const vertices = allParticles[i].geometry.vertices;
-            // for (let j = 0, jl = vertices.length; j < jl; j += 1) {
-
-            //     const particle = vertices[j];
-                
-            //     if (Math.random() > 0.3) {
-            //         // particle.x += Math.sin(frameCounter) * Math.random() * 5;
-            //         // particle.y += Math.sin(frameCounter) * Math.random() * 5;
-            //         //particle.x += Math.sin(frameCounter/100) * Math.random();
-            //         //particle.y += Math.cos(frameCounter/100) * Math.random();
-            //         //particle.x += Math.sin(frameCounter/10) * 2;
-            //     }
-                
-            // }
-            // allParticles[i].geometry.verticesNeedUpdate = true;
-            
+            loadImage(currentFrame, playerPos.x + rx, 0, playerPos.z + 500);
+            // loadImage(currentFrame, 0, 0, playerPos.z + 500);
         }
     }
 
-    rectLightHelper.update();
+    window.currentFrame = currentFrame;
 
-    renderer.render(scene, camera);
+    for (let i=0; i<guideCubes.length; i+=1) {
+        let guideC = guideCubes[i];
+        guideC.rotation.y += 0.01;
+        guideC.position.y = 10 + Math.sin(frameCounter/50);
+    }
+
+    animateParticles();
+
+    // renderer.render(scene, camera);
+    composer.render();
 
     frameCounter += 1;
 
@@ -609,6 +616,9 @@ const onResize = () => {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
+    renderer.toneMapping = THREE.ReinhardToneMapping;
+
+    composer.setSize( width, height );
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();

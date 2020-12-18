@@ -13,11 +13,11 @@ export class PointerLockManager {
     this.moveRight = false;
   
     this.velocity = new THREE.Vector3();
-    this.speed = 500;
+    this.speed = 200;
     this.deltaTime = 0.06;
     this.counter = 0;
     this.init(camera, scene);
-
+		this.firstTime = true;
 
   }
 
@@ -39,11 +39,20 @@ export class PointerLockManager {
       instructions.style.display = 'none';
       blocker.style.display = 'none';
 
-      // HACKY!!!
-      if (window.soundBg) {
+      // // HACKY!!!
+      if (window.soundBg && window.soundFx1) {
         if (!window.soundBg.isPlaying) {
-          // console.log("Start!", window.soundBg);
-          window.soundBg.play();
+					// console.log("Start!", window.soundBg);
+					
+					if (this.firstTime) {
+						window.soundFx1.play();
+						setTimeout(() => window.soundBg.play(), 6000);
+						this.firstTime = false;
+					} else {
+						window.soundBg.play();
+					}
+				
+          
         }
       }
 

@@ -13,7 +13,17 @@ body #cdawrap {
     --cda-top: 2rem;
 }
 
-
+html {
+    width: 100%;
+    height: 100%;
+    
+    background: #202050; /* Old browsers */
+    background: -moz-linear-gradient(top,  #202050 0%, #002000 50%, #502020 100%); /* FF3.6-15 */
+    background: -webkit-linear-gradient(top,  #202050 0%, #000000 50%,#502020 100%); /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(to bottom,  #202050 0%, #002000 80%, #502020 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#202050', endColorstr='#502020',GradientType=0 ); /* IE6-9 */
+  }
+  
 
 body {
     --color-text: #ffffff;
@@ -22,7 +32,7 @@ body {
     --color-link-hover: #fff;
     --color-info: #ffffff;
     color: var(--color-text);
-    background-color: var(--color-bg);
+    /* background-color: var(--color-bg); */
     font-family: monospace;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -42,7 +52,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--color-bg);
+    /* background: var(--color-bg); */
 }
 
 .js .loading::after {
