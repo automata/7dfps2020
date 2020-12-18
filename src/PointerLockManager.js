@@ -45,7 +45,7 @@ export class PointerLockManager {
 					// console.log("Start!", window.soundBg);
 					
 					if (this.firstTime) {
-						window.soundFx1.play();
+						window.soundFx2.play();
 						setTimeout(() => window.soundBg.play(), 6000);
 						this.firstTime = false;
 					} else {

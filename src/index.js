@@ -39,9 +39,9 @@ const color = new THREE.Color();
 const sceneBg = 0x202050;
 
 const params = {
-    exposure: 2,
-    bloomStrength: 2.5,
-    bloomThreshold: 0.2,
+    exposure: 0,
+    bloomStrength: 1.5,
+    bloomThreshold: 0.1,
     bloomRadius: 0.5
 };
 
@@ -67,8 +67,8 @@ const init = () => {
 
     // Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(sceneBg);
-    scene.fog = new THREE.FogExp2( 0x502020, 0.002 );
+    // scene.background = new THREE.Color(sceneBg);
+    scene.fog = new THREE.FogExp2( 0x502020, 0.001 );
     // scene.fog = new THREE.Fog(0x333333, 0, 750 );
 
     const light = new THREE.HemisphereLight( 0x502020, 0x202050, 0.5 );
@@ -88,11 +88,11 @@ const init = () => {
     // rectLightHelper = new RectAreaLightHelper( rectLight );
     // rectLight.add( rectLightHelper );
 
-    const geoFloor = new THREE.BoxBufferGeometry( 10000, 0.1, 10000 );
-    const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x502020, roughness: 1, metalness: 0. } );
-    const mshStdFloor = new THREE.Mesh( geoFloor, matStdFloor );
-    mshStdFloor.receiveShadow = true;
-    scene.add( mshStdFloor );
+    // const geoFloor = new THREE.BoxBufferGeometry( 10000, 0.1, 10000 );
+    // const matStdFloor = new THREE.MeshStandardMaterial( { color: 0x502020, roughness: 1, metalness: 0. } );
+    // const mshStdFloor = new THREE.Mesh( geoFloor, matStdFloor );
+    // mshStdFloor.receiveShadow = true;
+    // scene.add( mshStdFloor );
 
     particleSystem = createParticleSystem();
     scene.add(particleSystem);
@@ -131,7 +131,7 @@ const init = () => {
 
     composer.addPass( renderPass );
     // composer.addPass( fxaaPass );
-    composer.addPass( bloomPass );
+    // composer.addPass( bloomPass );
 
     // const renderScene = new RenderPass( scene, camera );
 
@@ -165,6 +165,7 @@ const initAudio = () => {
 
     window.soundBg = soundBg;
     window.soundFx1 = soundFx1;
+    window.soundFx2 = soundFx2;
 
     audioLoader.load( 'audio/drone_nofx.mp3', ( buffer ) => {
 
@@ -228,10 +229,10 @@ function createParticleSystem() {
 
 	// Create the material that will be used to render each vertex of the geometry
 	var particleMaterial = new THREE.PointsMaterial(
-			{color: 0x502020, 
+			{color: 0x220000, 
 			 size: 1,
 			 blending: THREE.AdditiveBlending,
-			 transparent: true,
+			//  transparent: true,
 			});
 	 
 
@@ -533,11 +534,10 @@ function animateParticles() {
 		if (vert.y < -200) {
 			vert.y = Math.random() * 400 - 200;
 		}
-		vert.y = vert.y - (12 * deltaTime);
+		vert.y = vert.y - (0.5 * deltaTime/10);
 	}
-	
-	
-    particleSystem.rotation.y -= .1 * deltaTime;
+    
+    particleSystem.rotation.y += .05 * deltaTime;
     particleSystem.position.x = controls.getObject().position.x;
     particleSystem.position.z = controls.getObject().position.z;
     particleSystem.geometry.verticesNeedUpdate = true;
@@ -566,8 +566,8 @@ const draw = (t) => {
         );
         if (dist < 10 && currentFrame > lastVisited) {
             guidePos.material.color.set(0x202050)
-            if (!soundFx2.isPlaying) {
-                soundFx2.play();
+            if (!soundFx1.isPlaying) {
+                soundFx1.play();
             }
 
             lastVisited = currentFrame;
@@ -616,7 +616,7 @@ const onResize = () => {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
-    renderer.toneMapping = THREE.ReinhardToneMapping;
+    // renderer.toneMapping = THREE.ReinhardToneMapping;
 
     composer.setSize( width, height );
 
